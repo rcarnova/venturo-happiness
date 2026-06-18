@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/server'
 import { font, fontD, colors, card } from '@/lib/design'
 import { fmtDate } from '@/lib/analytics'
 import CreateOrgForm from './CreateOrgForm'
@@ -7,12 +6,7 @@ import CreateCampaignForm from './CreateCampaignForm'
 import CreateUserForm from './CreateUserForm'
 
 export default async function AdminPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
-
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'superadmin') redirect('/dashboard')
+  const supabase = await createAdminClient()
 
   const { data: orgs } = await supabase
     .from('organizations')

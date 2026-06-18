@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound, redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { font, fontD, colors } from '@/lib/design'
 import { computeOverall, fmtDate, getLevel } from '@/lib/analytics'
@@ -10,9 +10,7 @@ interface Props { params: Promise<{ org: string }> }
 
 export default async function OrgDashboardPage({ params }: Props) {
   const { org: slug } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const supabase = await createAdminClient()
 
   const { data: org } = await supabase
     .from('organizations')

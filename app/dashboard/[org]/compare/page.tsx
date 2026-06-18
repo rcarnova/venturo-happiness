@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound, redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { font, fontD, colors, card } from '@/lib/design'
 import { computeDimensions, computeOverall, getLevel, fmtDate, diffCampaigns } from '@/lib/analytics'
@@ -15,9 +15,7 @@ export default async function ComparePage({ params, searchParams }: Props) {
   const { org: slug } = await params
   const { a: idA, b: idB } = await searchParams
 
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const supabase = await createAdminClient()
 
   const { data: org } = await supabase.from('organizations').select('id, name, slug').eq('slug', slug).single()
   if (!org) notFound()

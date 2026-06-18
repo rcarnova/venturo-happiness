@@ -1,5 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound, redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import BarChart from '@/components/BarChart'
 import Sparkline from '@/components/Sparkline'
@@ -13,9 +13,7 @@ interface Props {
 
 export default async function CampaignResultsPage({ params }: Props) {
   const { org: orgSlug, campaign: campaignId } = await params
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
+  const supabase = await createAdminClient()
 
   const { data: campaign } = await supabase
     .from('campaigns')
