@@ -50,63 +50,55 @@ alter table public.profiles       enable row level security;
 alter table public.campaigns      enable row level security;
 alter table public.responses      enable row level security;
 
--- Helper: get the calling user's profile
-create or replace function public.get_my_profile()
-returns public.profiles
-language sql security definer stable
-as $$
-  select * from public.profiles where id = auth.uid() limit 1;
+-- Helper: reads the calling user's role, bypasses RLS via security definer
+create or replace function public.get_my_role()
+returns text language sql security definer stable as $$
+  select role from public.profiles where id = auth.uid() limit 1;
 $$;
-
--- Organizations: superadmin sees all; HR sees only their org
-create policy "orgs_select" on public.organizations for select
-  using (
-    (select role from public.profiles where id = auth.uid()) = 'superadmin'
-    or id = (select org_id from public.profiles where id = auth.uid())
-  );
-
-create policy "orgs_insert" on public.organizations for insert
-  with check ((select role from public.profiles where id = auth.uid()) = 'superadmin');
-
-create policy "orgs_update" on public.organizations for update
-  using ((select role from public.profiles where id = auth.uid()) = 'superadmin');
-
-create policy "orgs_delete" on public.organizations for delete
-  using ((select role from public.profiles where id = auth.uid()) = 'superadmin');
 
 -- Profiles: users see their own; superadmin sees all
 create policy "profiles_select_own" on public.profiles for select
-  using (id = auth.uid() or (select role from public.profiles where id = auth.uid()) = 'superadmin');
+  using (id = auth.uid() or public.get_my_role() = 'superadmin');
 
 create policy "profiles_insert_superadmin" on public.profiles for insert
-  with check ((select role from public.profiles where id = auth.uid()) = 'superadmin');
+  with check (public.get_my_role() = 'superadmin');
 
 create policy "profiles_update_own" on public.profiles for update
-  using (id = auth.uid() or (select role from public.profiles where id = auth.uid()) = 'superadmin');
+  using (id = auth.uid() or public.get_my_role() = 'superadmin');
+
+-- Organizations: superadmin sees all; HR sees only their org
+create policy "orgs_select" on public.organizations for select
+  using (public.get_my_role() = 'superadmin'
+    or id = (select org_id from public.profiles where id = auth.uid()));
+
+create policy "orgs_insert" on public.organizations for insert
+  with check (public.get_my_role() = 'superadmin');
+
+create policy "orgs_update" on public.organizations for update
+  using (public.get_my_role() = 'superadmin');
+
+create policy "orgs_delete" on public.organizations for delete
+  using (public.get_my_role() = 'superadmin');
 
 -- Campaigns: superadmin sees all; HR sees their org
 create policy "campaigns_select" on public.campaigns for select
-  using (
-    (select role from public.profiles where id = auth.uid()) = 'superadmin'
-    or org_id = (select org_id from public.profiles where id = auth.uid())
-  );
+  using (public.get_my_role() = 'superadmin'
+    or org_id = (select org_id from public.profiles where id = auth.uid()));
 
 create policy "campaigns_insert" on public.campaigns for insert
-  with check ((select role from public.profiles where id = auth.uid()) = 'superadmin');
+  with check (public.get_my_role() = 'superadmin');
 
 create policy "campaigns_update" on public.campaigns for update
-  using (
-    (select role from public.profiles where id = auth.uid()) = 'superadmin'
-    or org_id = (select org_id from public.profiles where id = auth.uid())
-  );
+  using (public.get_my_role() = 'superadmin'
+    or org_id = (select org_id from public.profiles where id = auth.uid()));
 
 create policy "campaigns_delete" on public.campaigns for delete
-  using ((select role from public.profiles where id = auth.uid()) = 'superadmin');
+  using (public.get_my_role() = 'superadmin');
 
 -- Responses: superadmin sees all; HR sees responses for their org's campaigns
 create policy "responses_select" on public.responses for select
   using (
-    (select role from public.profiles where id = auth.uid()) = 'superadmin'
+    public.get_my_role() = 'superadmin'
     or campaign_id in (
       select id from public.campaigns
       where org_id = (select org_id from public.profiles where id = auth.uid())
